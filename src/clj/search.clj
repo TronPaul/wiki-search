@@ -17,6 +17,7 @@
 
 (defn ^SearchRequest search-request
   [text space]
+  (println space)
   (-> (SearchRequest.)
       (.indices #^"[Ljava.lang.String;" (into-array (list "wiki")))
       (.source (-> (SearchSourceBuilder.)
@@ -75,15 +76,12 @@
     (parse-response (.search es-client (search-request text space) RequestOptions/DEFAULT))))
 
 (def cli-options
-  [["-s" "--space" "Space key"
-    :parse-fn identity
-    :default nil
-    :required false]
-   ["-e" "--elasticsearch-url" "Elasticsearch URL"
+  [["-s" "--space SPACE" "Space key"
+    :default nil]
+   ["-e" "--elasticsearch-url URL" "Elasticsearch URL"
     :id :elasticsearch-host
     :default es/localhost-default
-    :parse-fn #(HttpHost/create %1)
-    :required false]])
+    :parse-fn #(HttpHost/create %1)]])
 
 (defn usage [options-summary]
   (->> ["Usage: wiki-search [options] [query text...]"

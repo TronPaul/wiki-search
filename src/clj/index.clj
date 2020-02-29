@@ -88,10 +88,9 @@
     (doall (map (partial index-page es-client wiki-base-url) (filter #(not (nil? (get-in %1 [:body :view :value]))) (space-results wiki-base-url space-key))))))
 
 (def cli-options
-  [["-s" "--space" "Space key"
-    :parse-fn identity
-    :required true]
-   ["-e" "--elasticsearch-url" "Elasticsearch URL"
+  [["-s" "--space SPACE" "Space key"
+    :parse-fn identity]
+   ["-e" "--elasticsearch-url URL" "Elasticsearch URL"
     :id :elasticsearch-host
     :default es/localhost-default
     :parse-fn #(HttpHost/create %1)
