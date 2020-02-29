@@ -2,4 +2,24 @@
         org.clojure/data.json {:mvn/version "1.0.0"}
         org.elasticsearch.client/elasticsearch-rest-high-level-client {:mvn/version "7.6.0"}
         hickory {:mvn/version "0.7.1"}
-        org.clojure/tools.cli {:mvn/version "1.0.194"}}}
+        org.clojure/tools.cli {:mvn/version "1.0.194"}
+        org.graalvm.nativeimage/svm {:mvn/version "20.0.0"}
+        org.slf4j/slf4j-simple {:mvn/version "1.7.30"}}
+ :paths ["src/clj"]
+ :build   {:java-source-paths "src/java"
+           :javac-options     ["-target" "1.8" "-source" "1.8" "-Xlint:-options"]
+           :compile-path      "target/classes"
+           :main-ns "search"
+           :native-image-options ["--initialize-at-build-time"
+                                  "--no-fallback"
+                                  "--enable-https"
+                                  ;; optional native image name override
+                                  "-H:Name=wiki-search"]
+           :native-image-compiler-options ["-Dclojure.compiler.direct-linking=true"]}
+ :aliases {:bg {:extra-paths ["dev-src" "src/java"]
+                :extra-deps {badigeon/badigeon {:git/url "https://github.com/EwenG/badigeon.git"
+                                                :sha     "f4bcca58536f49c10a5ea87b662f33ccf83338ce"
+                                                :tag     "0.0.10"}
+                             clj.native-image {:git/url "https://github.com/taylorwood/clj.native-image.git"
+                                               :sha "7708e7fd4572459c81f6a6b8e44c96f41cdd92d4"}}}
+           :native-image {:main-opts ["-e" "(load-file,\"dev-src/build.clj\"),(build/native-image)"]}}}

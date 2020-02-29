@@ -11,15 +11,16 @@
            (org.elasticsearch.search SearchHit)
            (org.elasticsearch.common.document DocumentField)
            (org.elasticsearch.common.text Text)
-           (org.apache.http HttpHost)))
+           (org.apache.http HttpHost))
+  (:gen-class))
 
 (defn ^SearchRequest search-request
   [text space]
   (-> (SearchRequest.)
-      (.indices (into-array (list "wiki")))
+      (.indices #^"[Ljava.lang.String;" (into-array (list "wiki")))
       (.source (-> (SearchSourceBuilder.)
                    (.query (-> (QueryBuilders/boolQuery)
-                               (.must (QueryBuilders/multiMatchQuery text (into-array ["title" "content"])))
+                               (.must (QueryBuilders/multiMatchQuery text #^"[Ljava.lang.String;" (into-array ["title" "content"])))
                                (cond->
                                  space (.filter (QueryBuilders/termQuery "space" space)))))
                    (.storedFields ["space" "space-name" "title" "url"])

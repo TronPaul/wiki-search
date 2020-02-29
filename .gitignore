@@ -4,3 +4,4 @@ pom.xml
 *.iml
 .cpcache/
 .nrepl-port
+*.log
