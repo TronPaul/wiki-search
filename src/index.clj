@@ -5,7 +5,7 @@
             [clojure.walk :refer [stringify-keys]]
             [hickory.core :as hickory]
             [clojure.string :as string]
-            [clojure.tools.cli :refer [parse-opts]])
+            [clojure.tools.cli :as cli])
   (:import (org.elasticsearch.client RestHighLevelClient RequestOptions)
            (org.elasticsearch.action.index IndexRequest)
            (org.elasticsearch.client.indices CreateIndexRequest GetIndexRequest)
@@ -30,10 +30,11 @@
   (space-results-from-page wiki-base-url (str "/rest/api/content?spaceKey=" space-key "&expand=body.view,space")))
 
 (defn page->document
-  [page]
+  [wiki-base-url page]
   {:title      (:title page)
    :content    (.text #^Document (hickory/parse (get-in page [:body :view :value])))
    :path       (get-in page [:_links :webui])
+   :url        (str wiki-base-url (get-in page [:_links :webui]))
    :space      (get-in page [:space :key])
    :space-name (get-in page [:space :name])})
 
@@ -56,6 +57,9 @@
                 :path {:type "keyword"
                        :index false
                        :store true}
+                :url {:type "keyword"
+                      :index false
+                      :store true}
                 :space {:type "keyword"
                         :store true}
                 :space-name {:type "text"
@@ -70,18 +74,18 @@
                                      (.mapping #^java.util.Map(into (array-map) (stringify-keys index-mappings)))) RequestOptions/DEFAULT))))
 
 (defn index-page
-  [^RestHighLevelClient client page]
+  [^RestHighLevelClient client wiki-base-url page]
   (.index client (-> (IndexRequest.)
                      #^IndexRequest (.index "wiki")
                      (.id (:id page))
-                     (.source #^java.util.Map (into (array-map) (stringify-keys (page->document page))))) RequestOptions/DEFAULT))
+                     (.source #^java.util.Map (into (array-map) (stringify-keys (page->document wiki-base-url page))))) RequestOptions/DEFAULT))
 
 ;todo batch indexing
 (defn index-space
   [wiki-base-url space-key]
-  (let [es-client (es/es-client es/localhost-default)]
+  (with-open [es-client (es/es-client es/localhost-default)]
     (ensure-index es-client 0)
-    (map (partial index-page es-client) (space-results wiki-base-url space-key))))
+    (doall (map (partial index-page es-client wiki-base-url) (filter #(not (nil? (get-in %1 [:body :view :value]))) (space-results wiki-base-url space-key))))))
 
 (def cli-options
   [["-s" "--space" "Space key"
@@ -111,7 +115,7 @@
   should exit (with a error message, and optional ok status), or a map
   indicating the action the program should take and the options provided."
   [args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
+  (let [{:keys [options arguments errors summary]} (cli/parse-opts args cli-options)]
     (cond
       ;(:help options) ; help => exit OK with usage summary
       ;{:exit-message (usage summary) :ok? true}

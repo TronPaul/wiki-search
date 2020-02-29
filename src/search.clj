@@ -2,7 +2,7 @@
   (:require [es :as es]
             [hickory.core :as hickory]
             [clojure.string :as string]
-            [clojure.tools.cli :refer [parse-opts]])
+            [clojure.tools.cli :as cli])
   (:import (org.elasticsearch.action.search SearchRequest SearchResponse)
            (org.elasticsearch.index.query QueryBuilders)
            (org.elasticsearch.search.fetch.subphase.highlight HighlightBuilder HighlightField)
@@ -22,7 +22,7 @@
                                (.must (QueryBuilders/multiMatchQuery text (into-array ["title" "content"])))
                                (cond->
                                  space (.filter (QueryBuilders/termQuery "space" space)))))
-                   (.storedFields ["space" "space-name" "title" "path"])
+                   (.storedFields ["space" "space-name" "title" "url"])
                    (.highlighter (-> (HighlightBuilder.)
                                      (.field "content")))))))
 
@@ -44,7 +44,8 @@
 (defn search
   [text {elasticsearch-host :elasticsearch-host
          space :space}]
-  (parse-response (.search (es/es-client elasticsearch-host) (search-request text space) RequestOptions/DEFAULT)))
+  (with-open [es-client (es/es-client elasticsearch-host)]
+    (parse-response (.search es-client (search-request text space) RequestOptions/DEFAULT))))
 
 (def cli-options
   [["-s" "--space" "Space key"
@@ -75,7 +76,7 @@
   should exit (with a error message, and optional ok status), or a map
   indicating the action the program should take and the options provided."
   [args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
+  (let [{:keys [options arguments errors summary]} (cli/parse-opts args cli-options)]
     (cond
       ;(:help options) ; help => exit OK with usage summary
       ;{:exit-message (usage summary) :ok? true}
@@ -96,4 +97,4 @@
   (let [{:keys [query options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (search query options))))
+      (doall (map println (search query options))))))
