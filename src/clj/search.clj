@@ -43,18 +43,30 @@
            (into {} (map (fn [[key ^DocumentField field]]
                            [(keyword key) (.getValue field)]) (into {} (.getFields hit)))))) (.getHits (.getHits search-response))))
 
+(defn format-fragment
+  [fragment]
+  (string/join (map (fn [sub-fragment]
+                      (if (:highlight sub-fragment)
+                        (colors/reverse-color (:text sub-fragment))
+                        sub-fragment)) fragment)))
+
 (defn format-highlight
   [highlights]
-  (string/join "..." (map #(string/join (map (fn [fragment]
-                                               (if (:highlight fragment)
-                                                 (colors/reverse-color (:text fragment))
-                                                 fragment)) %1)) highlights)))
+  (string/join "\n" (map #(str "- " (format-fragment %1)) highlights)))
 
-(defn cli-format
+(defn format-header
   [result]
-  (string/join " | " [(format-highlight (:highlights result))
-                (:url result)]))
+  (str (colors/bold (:title result)) " | " (:url result)))
 
+; TODO better format for small terminal sizes
+(defn format-hit
+  [hit]
+  (string/join "\n" [(format-header hit)
+                    (format-highlight (:highlights hit))]))
+
+(defn format-results
+  [results]
+  (string/join "\n\n" (map format-hit results)))
 
 (defn search
   [text {elasticsearch-host :elasticsearch-host
@@ -112,4 +124,4 @@
   (let [{:keys [query options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (doall (map #(println (cli-format %1)) (search query options))))))
+      (println (format-results (search query options))))))
