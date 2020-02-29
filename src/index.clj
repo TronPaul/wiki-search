@@ -3,11 +3,14 @@
             [clj-http.client :as client]
             [clojure.data.json :as json]
             [clojure.walk :refer [stringify-keys]]
-            [hickory.core :as hickory])
+            [hickory.core :as hickory]
+            [clojure.string :as string]
+            [clojure.tools.cli :refer [parse-opts]])
   (:import (org.elasticsearch.client RestHighLevelClient RequestOptions)
            (org.elasticsearch.action.index IndexRequest)
            (org.elasticsearch.client.indices CreateIndexRequest GetIndexRequest)
-           (org.jsoup.nodes Document)))
+           (org.jsoup.nodes Document)
+           (org.apache.http HttpHost)))
 
 (defn- get-json
   [url]
@@ -79,3 +82,54 @@
   (let [es-client (es/es-client es/localhost-default)]
     (ensure-index es-client 0)
     (map (partial index-page es-client) (space-results wiki-base-url space-key))))
+
+(def cli-options
+  [["-s" "--space" "Space key"
+    :parse-fn identity
+    :required true]
+   ["-e" "--elasticsearch-url" "Elasticsearch URL"
+    :id :elasticsearch-host
+    :default es/localhost-default
+    :parse-fn #(HttpHost/create %1)
+    :required false]])
+
+(defn usage [options-summary]
+  (->> ["Usage: wiki-search [options] [query text...]"
+        ""
+        "Options:"
+        options-summary
+        ""
+        "Please refer to the manual page for more information."]
+       (string/join \newline)))
+
+(defn error-msg [errors]
+  (str "The following errors occurred while parsing your command:\n\n"
+       (string/join \newline errors)))
+
+(defn validate-args
+  "Validate command line arguments. Either return a map indicating the program
+  should exit (with a error message, and optional ok status), or a map
+  indicating the action the program should take and the options provided."
+  [args]
+  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
+    (cond
+      ;(:help options) ; help => exit OK with usage summary
+      ;{:exit-message (usage summary) :ok? true}
+      errors ; errors => exit with description of errors
+      {:exit-message (error-msg errors)}
+      ;; custom validation on arguments
+      (= 1 (count arguments))
+      {:confluence-base-url (first arguments) :options options}
+      :else ; failed custom validation => exit with usage summary
+      {:exit-message (usage summary)})))
+
+(defn exit [status msg]
+  (println msg)
+  (System/exit status))
+
+
+(defn -main [& args]
+  (let [{:keys [confluence-base-url options exit-message ok?]} (validate-args args)]
+    (if exit-message
+      (exit (if ok? 0 1) exit-message)
+      (index-space confluence-base-url (:space options)))))

@@ -49,16 +49,16 @@
 (def cli-options
   [["-s" "--space" "Space key"
     :parse-fn identity
-    :default nil]
-   ["--elasticsearch-url" "Elasticsearch URL"
+    :default nil
+    :required false]
+   ["-e" "--elasticsearch-url" "Elasticsearch URL"
     :id :elasticsearch-host
     :default es/localhost-default
-    :parse-fn #(HttpHost/create %1)]])
+    :parse-fn #(HttpHost/create %1)
+    :required false]])
 
 (defn usage [options-summary]
-  (->> ["This is my program. There are many like it, but this one is mine."
-        ""
-        "Usage: wiki-search [options] [query text...]"
+  (->> ["Usage: wiki-search [options] [query text...]"
         ""
         "Options:"
         options-summary
@@ -96,6 +96,4 @@
   (let [{:keys [query options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (do
-        (println query)
-        (search query options)))))
+      (search query options))))
