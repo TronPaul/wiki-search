@@ -5,6 +5,7 @@
         org.clojure/tools.cli {:mvn/version "1.0.194"}
         org.graalvm.nativeimage/svm {:mvn/version "20.0.0"}
         org.slf4j/slf4j-simple {:mvn/version "1.7.30"}
+        org.apache.logging.log4j/log4j-to-slf4j {:mvn/version "2.13.0"}
         clojure-term-colors {:mvn/version "0.1.0"}}
  :paths ["src/clj"]
  :build   {:java-source-paths "src/java"
