@@ -17,7 +17,6 @@
 
 (defn ^SearchRequest search-request
   [text space]
-  (println space)
   (-> (SearchRequest.)
       (.indices #^"[Ljava.lang.String;" (into-array (list "wiki")))
       (.source (-> (SearchSourceBuilder.)

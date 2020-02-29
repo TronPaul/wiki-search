@@ -12,11 +12,11 @@ NOTE: this is planned usage and not yet complete
 
 ### Search
 
-    wiki-search -s space-key [search text]...
+    clojure -m search -s [space-key] --elasticsearch-url [elasticsearch-url] [search text...]...
 
 ### Indexing
 
-    wiki-index -s space-key --elasticsearch elasticsearch-url --force-index-creation confluence-base-url
+    clojure -m index -s [space-key] --elasticsearch-url [elasticsearch-url] --force-index-creation confluence-base-url
     
 ## Development
 
@@ -31,3 +31,7 @@ GraalVM. This makes building and distributing a bit tricky.
     a. [native-image component](https://www.graalvm.org/docs/reference-manual/native-image/)
     
 ### Building
+
+#### wiki-search native index
+
+    clojure -R:bg -A:native-image

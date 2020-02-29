@@ -10,7 +10,8 @@
            (org.elasticsearch.action.index IndexRequest)
            (org.elasticsearch.client.indices CreateIndexRequest GetIndexRequest)
            (org.jsoup.nodes Document)
-           (org.apache.http HttpHost)))
+           (org.apache.http HttpHost)
+           (org.elasticsearch.action.admin.indices.delete DeleteIndexRequest)))
 
 (defn- get-json
   [url]
@@ -82,8 +83,11 @@
 
 ;todo batch indexing
 (defn index-space
-  [wiki-base-url space-key]
+  [wiki-base-url {space-key :space
+                  force-index-creation :force-index-creation}]
   (with-open [es-client (es/es-client es/localhost-default)]
+    (if force-index-creation
+      (.delete (.indices es-client) (DeleteIndexRequest. "wiki") RequestOptions/DEFAULT))
     (ensure-index es-client 0)
     (doall (map (partial index-page es-client wiki-base-url) (filter #(not (nil? (get-in %1 [:body :view :value]))) (space-results wiki-base-url space-key))))))
 
@@ -93,8 +97,9 @@
    ["-e" "--elasticsearch-url URL" "Elasticsearch URL"
     :id :elasticsearch-host
     :default es/localhost-default
-    :parse-fn #(HttpHost/create %1)
-    :required false]])
+    :parse-fn #(HttpHost/create %1)]
+   [nil "--force-index-creation" "Force index creation"
+    :default false]])
 
 (defn usage [options-summary]
   (->> ["Usage: wiki-search [options] [query text...]"
@@ -135,4 +140,4 @@
   (let [{:keys [confluence-base-url options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (index-space confluence-base-url (:space options)))))
+      (index-space confluence-base-url options))))
