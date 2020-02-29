@@ -2,7 +2,8 @@
   (:require [es :as es]
             [hickory.core :as hickory]
             [clojure.string :as string]
-            [clojure.tools.cli :as cli])
+            [clojure.tools.cli :as cli]
+            [clojure.term.colors :as colors])
   (:import (org.elasticsearch.action.search SearchRequest SearchResponse)
            (org.elasticsearch.index.query QueryBuilders)
            (org.elasticsearch.search.fetch.subphase.highlight HighlightBuilder HighlightField)
@@ -25,21 +26,34 @@
                                  space (.filter (QueryBuilders/termQuery "space" space)))))
                    (.storedFields ["space" "space-name" "title" "url"])
                    (.highlighter (-> (HighlightBuilder.)
-                                     (.field "content")))))))
+                                     (.field "content")
+                                     (.fragmentSize (int 30))))))))
 
 (defn parse-response
   [^SearchResponse search-response]
   (map (fn [^SearchHit hit]
          (merge
-           {:highlight (map (fn [^Text text]
-                              (map (fn [html-frag]
-                                     (let [h (hickory/as-hickory html-frag)]
-                                       (if (and (map? h) (= (:tag h) :em))
-                                         {:highlight true
-                                          :text (:content h)}
-                                         h))) (hickory/parse-fragment (.string text)))) (.getFragments #^HighlightField (get (.getHighlightFields hit) "content")))}
+           {:highlights (vec (map (fn [^Text text]
+                                   (map (fn [html-frag]
+                                          (let [h (hickory/as-hickory html-frag)]
+                                            (if (and (map? h) (= (:tag h) :em))
+                                              {:highlight true
+                                               :text (:content h)}
+                                              h))) (hickory/parse-fragment (.string text)))) (.getFragments #^HighlightField (get (.getHighlightFields hit) "content"))))}
            (into {} (map (fn [[key ^DocumentField field]]
                            [(keyword key) (.getValue field)]) (into {} (.getFields hit)))))) (.getHits (.getHits search-response))))
+
+(defn format-highlight
+  [highlights]
+  (string/join "..." (map #(string/join (map (fn [fragment]
+                                               (if (:highlight fragment)
+                                                 (colors/reverse-color (:text fragment))
+                                                 fragment)) %1)) highlights)))
+
+(defn cli-format
+  [result]
+  (string/join " | " [(format-highlight (:highlights result))
+                (:url result)]))
 
 
 (defn search
@@ -98,4 +112,4 @@
   (let [{:keys [query options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (doall (map println (search query options))))))
+      (doall (map #(println (cli-format %1)) (search query options))))))

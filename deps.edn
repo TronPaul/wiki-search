@@ -4,7 +4,8 @@
         hickory {:mvn/version "0.7.1"}
         org.clojure/tools.cli {:mvn/version "1.0.194"}
         org.graalvm.nativeimage/svm {:mvn/version "20.0.0"}
-        org.slf4j/slf4j-simple {:mvn/version "1.7.30"}}
+        org.slf4j/slf4j-simple {:mvn/version "1.7.30"}
+        clojure-term-colors {:mvn/version "0.1.0"}}
  :paths ["src/clj"]
  :build   {:java-source-paths "src/java"
            :javac-options     ["-target" "1.8" "-source" "1.8" "-Xlint:-options"]
