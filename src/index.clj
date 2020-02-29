@@ -73,8 +73,9 @@
                      (.id (:id page))
                      (.source #^java.util.Map (into (array-map) (stringify-keys (page->document page))))) RequestOptions/DEFAULT))
 
+;todo batch indexing
 (defn index-space
   [wiki-base-url space-key]
-  (let [es-client (es/es-client)]
+  (let [es-client (es/es-client es/localhost-default)]
     (ensure-index es-client 0)
     (map (partial index-page es-client) (space-results wiki-base-url space-key))))
